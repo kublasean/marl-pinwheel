@@ -1,6 +1,7 @@
 # sean whalen
 # reads in a game file
 # outputs a list of valid states
+# TODO just blob the s dictionary with pickle?
 
 import sys
 import numpy as np
