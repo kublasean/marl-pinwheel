@@ -6,6 +6,7 @@
 import sys
 import numpy as np
 import copy
+import pickle
 
 def print_board(board):
     for line in board:
@@ -108,9 +109,15 @@ def main(args):
                 out[ii][jj] = ' '
             out[i][j] = ' '
     
-    print(len(s))  
-    for skey in s.keys():
-        print(skey)
+    dump = {}
+    dump["space"] = space
+    dump["starts"] = starts
+    dump["nrows"] = nrows
+    dump["ncols"] = ncols
+    dump["nagents"] = nagent
+    dump["board"] = out
+    dump["v"] = s
+    pickle.dump(dump, open(args[1]+".p", "wb"))
     return 0
 
 if __name__ == "__main__":
