@@ -7,6 +7,7 @@ import sys
 import numpy as np
 import copy
 import pickle
+import itertools as it
 from state_gen import print_board, getkey
 
 class pinwheel:
@@ -16,8 +17,8 @@ class pinwheel:
         this.ncols = config['ncols']
         this.nagents = config['nagents']
         this.starts = config['starts']
-        this.copy_v = config['v']
-        this.goals = [this.starts[(i+1) % this.nagents] for i in range(this.nagents)]
+        this.states = config['states']
+        this.goals = config['goals']
         this.pos = [[this.starts[i][0], this.starts[i][1]] for i in range(this.nagents)] 
     def isTerminal(this):
         for pos, goal in zip(this.pos, this.goals):
@@ -26,7 +27,13 @@ class pinwheel:
         return True
     def move(this, agent_actions, reset):
         new_pos = []
-        #pos: position of agent, a: agent action
+        taken = {}
+
+        #set current positions
+            for i, (r, c) in enumerate(this.pos):
+                this.board[r][c] = repr(i)
+        
+        #find new positions
         for i, (pos, a) in enumerate(zip(this.pos, agent_actions)):
             row, col = pos
             #N
@@ -41,59 +48,109 @@ class pinwheel:
             #W
             else:
                 col -= 1
+            #can only move onto space
+            if this.board[row][col] != ' ':
+                row, col = pos
             key = repr(row)+repr(col)
+            if key in taken:
+                taken[key].append(i)
+            else:
+                taken[key] = [i]
+            new_pos.append([row,col])
 
-            #going out of bounds
-            if this.board[row][col] == 'x':
-                row, col = pos
-            #another agent occupies
-            elif this.board[row][col] != ' ':
-                row, col = pos
-                other_id = int(this.board[row][col])
-                new_pos[other_id][0] = this.pos[other_id][0]
-                new_pos[other_id][1] = this.pos[other_id][1]
-            new_pos.append([row, col])
-            board[row][col] = repr(i)
-            
-            return sn, 0
+        #agent collisions
+        if len(taken) != this.nagents:
+            for k,v in taken.items():
+                if len(v) == 1:
+                    continue
+                for i in v:
+                    row, col = this.pos[i]
+                    new_pos[i] = [row, col]
+        
+        #clear old positions
+        for r, c in this.pos:
+            this.board[r][c] = ' '
+        
+        #update agent positions
+        this.pos = new_pos
+        for i, (r,c) in enumerate(this.pos):
+            this.board[r][c] = repr(i)
+        nextstate = getkey(this.board)
 
+        if reset:
+            for r,c in this.pos:
+                this.board[r][c] = ' ' 
+        
+        #reward for finishing game
+        if this.isTerminal():
+            return nextstate, 1
+        return nextstate, 0
+
+    def play_game(this):
+        while True:
+            #set current positions
+            for i, (r, c) in enumerate(this.pos):
+                this.board[r][c] = repr(i)
+            print_board(this.board)
+            line = input()
+            actions = line.strip().split()
+            if len(actions) != this.nagents:
+                break
+            agent_actions = []
+            for a in actions:
+                if a == 'w':
+                    agent_actions.append(0)
+                elif a == 'd':
+                    agent_actions.append(1)
+                elif a == 's':
+                    agent_actions.append(2)
+                elif a == 'a':
+                    agent_actions.append(3)
+                else:
+                    break
+            if this.move(agent_actions, False):
+                break
     
-def value_iteration(game, gamma):
-    v = np.zeros((game.dim, game.dim))
-    pi = np.ones((game.dim, game.dim, game.actions))
+def value_iteration(g, v, gamma):
+    pi = {}
+    
     thresh = 0.0001
     delta = 1
+    actions = [i for i in it.product(range(4),repeat=this.nagents)]
+    for k in v.keys():
+        pi[k] = np.ones((nagents,4))
+    
     #converge on value function
     while delta > thresh:
         delta = 0
-        for i in range(game.dim):
-            for j in range(game.dim):
-                s = state(i,j)
-                if game.isTerminal(s):
-                    continue
-                rs = np.zeros(game.actions)
-                for a in range(game.actions):
-                    sn, r = game.getNextSR(s,a)
-                    rs[a] = r + gamma*v[sn.row,sn.col]
-                newV = np.amax(rs)
-                if delta < abs(newV - v[i,j]):
-                    delta = abs(newV - v[i,j])
-                v[i,j] = newV
+        for s, agent_pos in g.states.items():
+            g.pos = agent_pos
+            if game.isTerminal():
+                continue
+            rs = []
+            for a in actions:
+                sn, r = game.move(a)
+                rs.append(r + gamma*v[sn])
+            newV = max(rs)
+            if delta < abs(newV - v[s]):
+                delta = abs(newV - v[s])
+            v[s] = newV
+    
     #derive policy
-    for i in range(game.dim):
-        for j in range(game.dim):
-            s = state(i,j)
-            rs = np.zeros(game.actions)
-            for a in range(game.actions):
-                    sn, r = game.getNextSR(s,a)
-                    rs[a] = r + gamma*v[sn.row,sn.col]
-            bestMoves = rs == np.amax(rs)
-            numOfMoves = np.sum(bestMoves)
-            for a in range(game.actions):
-                if bestMoves[a]:
-                    pi[i,j,a] = 1.0/numOfMoves
-                else:
-                    pi[i,j,a] = 0.0
+    for s, agent_pos in g.states.items():
+        g.pos = agent_pos
+        if game.isTerminal():
+            continue
+        rs = []
+        for a in actions:
+            sn, r = game.move(a)
+            rs.append(r + gamma*v[sn])
+        best = max(rs)
+        num_best = 0
+        for i, q in enumerate(rs):
+            if q != best:
+                pi[s] 
+
     return v, pi
 
 def main(args):
@@ -104,12 +161,8 @@ def main(args):
 
     config = pickle.load( open(args[1], "rb") )
     g = pinwheel(config)
-
-    print(getkey(g.board))
-    print(g.starts)
-    print(g.goals)
-
-    print(g.pos)
+    g.play_game()
+    
 
 if __name__ == "__main__":
 	main(sys.argv)

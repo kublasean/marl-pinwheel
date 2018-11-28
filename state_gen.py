@@ -33,25 +33,39 @@ def main(args):
     ncols = None
     nagent = None
     board = []
+    board1 = []
     space = []
     starts = []
+    goals = []
     s = {}
+    v = {}
     
     with open(args[1], "r") as f:
         fields = f.readline().split(" ")
         nrows = int(fields[0])
         ncols = int(fields[1])
         nagent = int(f.readline())
-        for line in f:
+        starts = [ [0,0] for i in range(nagent)]
+        goals = [ [0,0] for i in range(nagent)]
+
+        for i in range(nrows):
+            line = f.readline()
             board.append(list(line.strip()))
-        #print_board(board)
+        f.readline()
+        for i in range(nrows):
+            line = f.readline()
+            board1.append(list(line.strip()))
 
     for i in range(nrows):
         for j in range(ncols):
-            if board[i][j] == '.':
-                starts.append((i,j))
-            if board[i][j] == '.' or board[i][j] == ' ':
+            if board[i][j] != ' ' and board[i][j] != 'x':
+                index = int(board[i][j])
+                starts[index] = [i,j]
+            if board[i][j] != 'x':
                 space.append((i,j))
+            if board1[i][j] != ' ' and board1[i][j] != 'x':
+                index = int(board1[i][j])
+                goals[index] = [i,j]
     
     out = copy.deepcopy(board)
     for i,j in space:
@@ -61,7 +75,8 @@ def main(args):
     if nagent == 1:
         for i,j in space:
             out[i][j] = '0'
-            s[getkey(out)] = 0.0
+            s[getkey(out)] = [[i,j]]
+            v[getkey(out)] = 0.0
             out[i][j] = ' '
     elif nagent == 2:
         for i,j in space:
@@ -70,7 +85,8 @@ def main(args):
                 if out[ii][jj] != ' ':
                     continue
                 out[ii][jj] = '1'
-                s[getkey(out)] = 0.0
+                s[getkey(out)] = [[i,j],[ii,jj]]
+                v[getkey(out)] = 0.0
                 out[ii][jj] = ' '
             out[i][j] = ' '
     elif nagent == 3:
@@ -84,7 +100,8 @@ def main(args):
                     if out[iii][jjj] != ' ':
                         continue
                     out[iii][jjj] = '2'
-                    s[getkey(out)] = 0.0
+                    s[getkey(out)] = [[i,j],[ii,jj],[iii,jjj]]
+                    v[getkey(out)] = 0.0
                     out[iii][jjj] = ' '
                 out[ii][jj] = ' '
             out[i][j] = ' '
@@ -103,7 +120,8 @@ def main(args):
                         if out[iiii][jjjj] != ' ':
                             continue
                         out[iiii][jjjj] = '3'
-                        s[getkey(out)] = 0.0
+                        s[getkey(out)] = [[i,j],[ii,jj],[iii,jjj],[iiii,jjjj]]
+                        v[getkey(out)] = 0.0
                         out[iiii][jjjj] = ' '
                     out[iii][jjj] = ' '
                 out[ii][jj] = ' '
@@ -112,11 +130,14 @@ def main(args):
     dump = {}
     dump["space"] = space
     dump["starts"] = starts
+    dump["goals"] = goals
     dump["nrows"] = nrows
     dump["ncols"] = ncols
     dump["nagents"] = nagent
     dump["board"] = out
-    dump["v"] = s
+    dump["states"] = s
+    dump["v"] = v
+
     pickle.dump(dump, open(args[1]+".p", "wb"))
     return 0
 
