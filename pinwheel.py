@@ -27,6 +27,7 @@ def sample(probs):
 class pinwheel:
     def __init__(this, config):
         this.board = config['board']
+        this.blank = copy.deepcopy(this.board)
         this.nrows = config['nrows']
         this.ncols = config['ncols']
         this.nagents = config['nagents']
@@ -37,6 +38,7 @@ class pinwheel:
         this.actions = [list(i) for i in it.product(range(4),repeat=this.nagents)]
 
     def init_ep(this):
+        this.board = copy.deepcopy(this.blank)
         this.pos = copy.copy(this.starts)
         this.setpos()
     def isTerminal(this):
@@ -107,8 +109,8 @@ class pinwheel:
         
         #reward for finishing game
         if this.isTerminal():
-            return nextstate, 0
-        return nextstate, -1
+            return nextstate, 1
+        return nextstate, 0
 
     #doesn't reset anything
     def move1(this, agent_actions):
@@ -155,8 +157,8 @@ class pinwheel:
         this.pos = new_pos
         #reward for finishing game
         if this.isTerminal():
-            return nextstate, 0
-        return nextstate, -1
+            return nextstate, 1
+        return nextstate, 0
 
     def play_game(this):
         while True:

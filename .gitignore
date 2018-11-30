@@ -5,3 +5,6 @@ __pycache__/state_gen.cpython-36.pyc
 __pycache__/pinwheel.cpython-36.pyc
 __pycache__/state_gen.cpython-36.pyc
 .ipynb_checkpoints/marl_nn-checkpoint.ipynb
+reinforcement_q_learning.ipynb
+__pycache__/state_gen.cpython-37.pyc
+.ipynb_checkpoints/reinforcement_q_learning-checkpoint.ipynb

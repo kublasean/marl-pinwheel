@@ -82,18 +82,18 @@ def value_iteration(g, v, gamma):
     return v, pi
 
 def main(args):
-    usage = "./solve-dp game-file.p"
-    if len(args) != 2:
+    usage = "./solve-dp game-file.p out-file"
+    if len(args) != 3:
         print(usage)
         return -1
 
     config = pickle.load( open(args[1], "rb") )
     g = pinwheel(config)
 
-    v, pi = value_iteration(g, config['v'], 1.0)
+    v, pi = value_iteration(g, config['v'], 0.9)
     
-    pickle.dump(v, open("dp/"+args[1]+".v", "wb"))
-    pickle.dump(pi, open("dp/"+args[1]+".pi", "wb"))
+    pickle.dump(v, open("dp/"+args[2]+".v", "wb"))
+    pickle.dump(pi, open("dp/"+args[2]+".pi", "wb"))
 
 if __name__ == "__main__":
 	main(sys.argv)
