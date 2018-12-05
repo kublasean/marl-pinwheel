@@ -37,9 +37,9 @@ class pinwheel:
         this.pos = [[this.starts[i][0], this.starts[i][1]] for i in range(this.nagents)]
         this.actions = [list(i) for i in it.product(range(4),repeat=this.nagents)]
 
-    def init_ep(this):
+    def init_ep(this, pos):
         this.board = copy.deepcopy(this.blank)
-        this.pos = copy.copy(this.starts)
+        this.pos = copy.copy(pos)
         this.setpos()
     def isTerminal(this):
         for pos, goal in zip(this.pos, this.goals):
