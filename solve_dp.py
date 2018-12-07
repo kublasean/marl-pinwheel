@@ -13,6 +13,86 @@ import itertools as it
 from state_gen import print_board, getkey
 from pinwheel import pinwheel
 
+class Agent:
+    def __init__(self, states, i):
+        self.v = {}
+        self.pi = {}
+        self.id = i
+        for k in states.keys():
+            self.pi[k] = [1.0/4 for i in range(4)]
+            self.v[k] = 0.0
+
+def actionValue(state, agent_action, agents, agent_id, g, gamma):
+    val = 0.0
+    for action in g.actions:
+        pa = 1.0
+        if action[agent_id] != agent_action:
+            continue
+        for i in range(len(action)):
+            if agent_id == i:
+                continue
+            pa *= agents[i].pi[state][action[i]]
+        g.init_ep(g.states[state])
+        sn, r = g.move1(action)
+        val += pa * (r + gamma * agents[agent_id].v[sn])
+    return val
+
+def calculateV(agents, g, gamma):
+    delta = 1
+    thresh = 0.001
+    while(delta > thresh):
+        delta = 0
+        for i, agent in enumerate(agents):
+            for s in g.states.keys():
+                val = 0
+                for a, pa in enumerate(agent.pi[s]):
+                    val += pa * actionValue(s,a,agents,i,g,gamma)
+                if delta < abs(val - agent.v[s]):
+                    delta = abs(val - agent.v[s])
+                agent.v[s] = val
+
+def calculatePi(agents, agent_id, g, gamma):
+    samepi = True
+    agent = agents[agent_id]
+    for s, agent_pos in g.states.items():
+        g.init_ep(agent_pos)
+        if g.isTerminal():
+            continue
+        rs = []
+        for a in range(4):
+            rs.append(actionValue(s,a,agents,agent_id,g,gamma))
+        best = max(rs)
+        num_best = 0
+        new_pi = [1.0 for i in range(4)]
+        for i, q in enumerate(rs):
+            if q != best:
+                new_pi[i] = 0.0
+            else:
+                num_best += 1
+        for i in range(len(rs)):
+            new_pi[i] /= num_best
+            if agent.pi[s][i] != new_pi[i]:
+                samepi = False
+            agent.pi[s][i] = new_pi[i]
+    return samepi
+
+
+def multi_value_iteration(agents, g, gamma):
+    delta = 1
+    thresh = 0.001
+    while(delta > thresh):
+        delta = 0
+        for i, agent in enumerate(agents):
+            for s in g.states.keys():
+                val = 0
+                rs = []
+                for a in range(4):
+                    rs.append(actionValue(s,a,agents,i,g,gamma))
+                val = max(rs)
+                if delta < abs(val - agent.v[s]):
+                    delta = abs(val - agent.v[s])
+                agent.v[s] = val
+
 def value_iteration(g, v, gamma):
     pi = {}
     thresh = 0.0001
@@ -25,14 +105,14 @@ def value_iteration(g, v, gamma):
     while delta > thresh:
         delta = 0
         for s, agent_pos in g.states.items():
-            g.pos = copy.copy(agent_pos)
+            g.init_ep(agent_pos)
             if g.isTerminal():
                 continue
             rs = []
             for a in actions:
-                g.pos = copy.copy(agent_pos)
-                sn, r = g.move(a, True)
+                sn, r = g.move1(a)
                 rs.append(r + gamma*v[sn])
+                g.init_ep(agent_pos)
             newV = max(rs)
             if delta < abs(newV - v[s]):
                 delta = abs(newV - v[s])
@@ -40,17 +120,17 @@ def value_iteration(g, v, gamma):
     
     #derive policy
     for s, agent_pos in g.states.items():
-        g.pos = copy.copy(agent_pos)
+        g.init_ep(agent_pos)
         if g.isTerminal():
             continue
         rs = []
         sns = []
         for a in actions:
-            g.pos = copy.copy(agent_pos)
-            sn, r = g.move(a, True)
+            sn, r = g.move1(a)
             ret = r + gamma*v[sn]
             rs.append(ret)
             sns.append(sn)
+            g.init_ep(agent_pos)
         best = max(rs)
         num_best = 0
         for i, q in enumerate(rs):
